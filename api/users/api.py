@@ -14,6 +14,7 @@ cors = flask_cors.CORS()
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.Text, unique=True)
+    email = db.Column(db.Text, unique=True)
     password = db.Column(db.Text)
     roles = db.Column(db.Text)
     is_active = db.Column(db.Boolean, default=True, server_default='true')
@@ -123,9 +124,25 @@ def protected():
     return {"message": f'protected endpoint (allowed user {flask_praetorian.current_user().username})'}
 
 
-@app.route('/register', methods=['POST'])
+@app.route('/api/register', methods=['POST'])
 def register():
-    
+    req = flask.request.get_json()(force=True)
+    username = req.get('username', None)
+    email = req.get('email', None)
+    password = req.get('password', None)
+    new_user = User(
+        username=username,
+        password=password,
+        email=email,
+        roles='user'
+    )
+    db.session.add(new_user)
+    db.session.commit()
+    guard.send_registration_email(email, user=new_user)
+    ret = {'message': 'successfully sent registration email to user {}'.format(
+        new_user.username
+    )}
+    return flask.jsonify(ret), 201
 
 
 # Run the example
