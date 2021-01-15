@@ -3,11 +3,13 @@ import flask
 import flask_sqlalchemy
 import flask_praetorian
 import flask_cors
-from flask import request
+import flask_marshmallow
+from flask import request, jsonify
 
 db = flask_sqlalchemy.SQLAlchemy()
 guard = flask_praetorian.Praetorian()
 cors = flask_cors.CORS()
+ma = flask_marshmallow.Marshmallow()
 
 
 # A generic user model that might be used by an app powered by flask-praetorian
@@ -42,6 +44,14 @@ class User(db.Model):
         return self.is_active
 
 
+class UserSchema(ma.SQLAlchemyAutoSchema):
+    class Meta:
+        model = User
+
+
+user_schema = UserSchema()
+users_schema = UserSchema(many=True)
+
 # Initialize flask app for the example
 app = flask.Flask(__name__)
 app.debug = True
@@ -59,6 +69,8 @@ db.init_app(app)
 
 # Initializes CORS so that the api_tool can talk to the example app
 cors.init_app(app)
+
+ma.init_app(app)
 
 # Add users for the example
 with app.app_context():
@@ -90,6 +102,7 @@ def login():
     req = flask.request.get_json(force=True)
     username = req.get('username', None)
     password = req.get('password', None)
+    print(username, password)
     user = guard.authenticate(username, password)
     ret = {'access_token': guard.encode_jwt_token(user)}
     return ret, 200
@@ -114,32 +127,32 @@ def refresh():
 @app.route('/api/protected')
 @flask_praetorian.auth_required
 def protected():
-    """
-    A protected endpoint. The auth_required decorator will require a header
-    containing a valid JWT
-    .. example::
-       $ curl http://localhost:5000/api/protected -X GET \
-         -H "Authorization: Bearer <your_token>"
-    """
     return {"message": f'protected endpoint (allowed user {flask_praetorian.current_user().username})'}
+
+
+@app.route('/api/users/', methods=['GET'])
+# @flask_praetorian.auth_required
+def get_all_users():
+    all_users = User.query.all()
+    return jsonify({'users': users_schema.dump(all_users)})
 
 
 @app.route('/api/register', methods=['POST'])
 def register():
-    req = flask.request.get_json()(force=True)
+    req = flask.request.get_json(force=True)
     username = req.get('username', None)
     email = req.get('email', None)
     password = req.get('password', None)
     new_user = User(
         username=username,
-        password=password,
+        password=guard.hash_password(password),
         email=email,
         roles='user'
     )
     db.session.add(new_user)
     db.session.commit()
-    guard.send_registration_email(email, user=new_user)
-    ret = {'message': 'successfully sent registration email to user {}'.format(
+    # guard.send_registration_email(email, user=new_user)
+    ret = {'message': 'successfully register with username {}'.format(
         new_user.username
     )}
     return flask.jsonify(ret), 201
