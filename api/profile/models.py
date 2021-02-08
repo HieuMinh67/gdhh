@@ -1,12 +1,13 @@
 from database import col, rel, ref, Model, db
 import datetime as dt
 
+
 class Profile(Model):
     __tablename__ = 'hoso__thanh_vien'
 
-    id = col(db.Integer, primary_key=True)
+    id = col(db.Integer, primary_key=True, autoincrement=True)
 
-    id_user = ref('user__user', nullable=True, autoincrement=True)
+    id_user = ref('user__user', nullable=True)
     user = rel('User', backref='profile')
     sex = col(db.String(6), nullable=False)
     dob = col(db.Date)
@@ -20,7 +21,11 @@ class Profile(Model):
     firstname = col(db.String(50), nullable=False)
     middlename = col(db.String(50), nullable=False)
     lastname = col(db.String(50), nullable=False)
-    id_ten_thanh = ref('hoso__christian_name')
+    id_ten_thanh = db.Column(
+        db.String(24),
+        db.ForeignKey('hoso__christian_name.id'),
+        nullable=False,
+    )
     ho_ten_bo = col(db.String(255))
     ho_ten_me = col(db.String(255))
     nghe_nghiep_bo = col(db.String(255))
@@ -39,14 +44,3 @@ class Profile(Model):
         db.session.add(self)
         db.session.commit()
         return self
-
-
-class ChristianName(Model):
-    __tablename__ = 'hoso__christian_name'
-
-    id = col(db.String(24), primary_key=True)
-    sex = col(db.String(6), nullable=False)
-    tieng_viet = col(db.String(250))
-    tieng_anh = col(db.String(250))
-    code = col(db.String(250), unique=True)
-    profiles = db.relation('Profile', backref='christianname', lazy=True)

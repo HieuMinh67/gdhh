@@ -1,8 +1,9 @@
 import flask
 from config import ProdConfig, DevConfig
-from extensions import guard, db, cors, ma
+from extensions import guard, db, cors, ma, migrate
 import user
 import profile
+import christian_name
 
 
 def create_app(config_object=ProdConfig):
@@ -30,6 +31,7 @@ def create_app(config_object=ProdConfig):
 def register_extensions(app):
     guard.init_app(app, user.User)
     db.init_app(app)
+    migrate.init_app(app, db)
     ma.init_app(app)
 
 
@@ -37,9 +39,11 @@ def register_blueprint(app):
     origins = app.config.get('CORS_ORIGIN_WHITELIST', '*')
     cors.init_app(user.views.blueprint, origins=origins)
     cors.init_app(profile.views.blueprint, origins=origins)
+    cors.init_app(christian_name.views.blueprint, origins=origins)
 
     app.register_blueprint(user.views.blueprint)
     app.register_blueprint(profile.views.blueprint, url_prefix='/api/profiles')
+    app.register_blueprint(christian_name.views.blueprint, url_prefix='/api/christianNames')
 
 
 if __name__ == '__main__':

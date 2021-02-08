@@ -6,17 +6,16 @@ from extensions import db
 blueprint = Blueprint('profile', __name__)
 
 
-@blueprint.route('/a', methods=['GET'])
+@blueprint.route('/', methods=['GET'])
 def get_all():
     all_profiles = Profile.query.all()
     return make_response(jsonify({'profiles': profiles_schema.dump(all_profiles)}), 200)
 
 
-@blueprint.route('/a', methods=['POST'])
+@blueprint.route('/', methods=['POST'])
 def register_profile():
     data = request.get_json()
     profile = profile_schema.load(data)
-    print(profile, type(profile))
     db.session.add(profile)
     db.session.commit()
     return make_response('', 201)
